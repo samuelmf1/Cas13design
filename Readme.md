@@ -1,6 +1,18 @@
 # Cas13design v0.2
 
+Forked from the original [sanjanalab/cas13](https://gitlab.com/sanjanalab/cas13) GitLab repo.
+
 This R software scores guide RNAs for the RNA-targeting CRISPR protein Cas13d to maximize target knockdown efficacy.
+
+> **Performance note:** a review of the RNAhybrid scoring step and some
+> updates to it (see [RNAHYBRID_BATCH_SPEEDUP.md](RNAHYBRID_BATCH_SPEEDUP.md))
+> found:
+> - 474x on raw RNAhybrid pairs (18.95s → 0.04s)
+> - 5.4x – 12.7x on full real transcript runs (982 nt and 8,389 nt)
+> - projected ~53x–1,144x at production concurrency, with one real 4.4 Mb
+>   chunk going from ~28 hours to ~32 minutes
+> - verified bit-for-bit correct against vanilla RNAhybrid (identical MFEs,
+>   identical SHA-256 output)
 
 
 ## Background
