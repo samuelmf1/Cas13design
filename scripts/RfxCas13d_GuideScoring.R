@@ -37,9 +37,9 @@ check.packages(packages)
 ##### input files
 args = commandArgs(trailingOnly=TRUE)
 
-if (length(args)!=3) {
-  stop("Exiting! Please provide fasta input: <file.fasta>, Random Forest Model input <Cas13designGuidePredictorInput.csv> and if you would like the results plotted <true> or <false>", call.=FALSE)
-} else if (length(args)==3) {
+if (!(length(args) %in% c(3, 4))) {
+  stop("Exiting! Please provide fasta input: <file.fasta>, Random Forest Model input <Cas13designGuidePredictorInput.csv>, plot <true|false>, and optional combined CSV output", call.=FALSE)
+} else {
   FA <- Biostrings::readDNAStringSet(filepath = args[1], format = "fasta", use.names = T) # FA <- Biostrings::readDNAStringSet(filepath = "./data/test.fa", format = "fasta", use.names = T)
   if (length(FA) < 1){
     stop("Exiting! No FASTA entries found in input file.")
@@ -54,6 +54,13 @@ if (length(args)!=3) {
   if (args[3] %in% c("true","True","TRUE","T","treu","Treu","TREU","ture","Ture","TURE")){
     PLOT = TRUE
   }else{PLOT = FALSE}
+
+  # When provided, append every transcript result to one subchunk file. This
+  # avoids creating and rereading one CSV per transcript on the shared FS.
+  combined_output = if (length(args) == 4) args[4] else NA_character_
+  if (!is.na(combined_output) && file.exists(combined_output)) {
+    file.remove(combined_output)
+  }
 }
 
 
@@ -364,8 +371,12 @@ GetMFE_bulk = function(guides, DR = DirectRepeat){
 }
 
 ReadUnpairedPorbabilities = function(x){
-  UnpairedProbabilities <- read.delim(x, sep="\t", skip = 1, row.names = "X.i.")[,1:50]
-  colnames(UnpairedProbabilities) <- seq(1,50,1)
+  raw <- read.delim(x, sep="\t", skip = 1, row.names = "X.i.")
+  if (ncol(raw) < guideLength) {
+    stop(paste0("RNAplfold output has only ", ncol(raw), " lengths; expected ", guideLength))
+  }
+  UnpairedProbabilities <- raw[, seq_len(guideLength), drop = FALSE]
+  colnames(UnpairedProbabilities) <- seq_len(guideLength)
   UnpairedProbabilities=t(UnpairedProbabilities)
   return(UnpairedProbabilities)
 }
@@ -483,7 +494,7 @@ GetTargetSiteAccessibility = function( dat = Guide.df, fa = FA ){
   writeXStringSet(fa, filepath = paste0('./',RanStr,'.fa'), append=FALSE, format="fasta")
   
   # You may need to change the path to your RNAplfold executable 
-  cmd = paste0( "cat ", paste0('./',RanStr,'.fa')  , " | ", RNAplfold , " -L 40 -W 80 -u 50 ")
+  cmd = paste0( "cat ", paste0('./',RanStr,'.fa')  , " | ", RNAplfold , " -L 40 -W 80 -u 23 -c 1 ")
   output = system(cmd , intern = TRUE )
   
   UnpairedProbabilities = ReadUnpairedPorbabilities(x = paste0('./',RanStr,'_lunp') )
@@ -692,7 +703,7 @@ FA.all = FA
 # This avoids spawning one subprocess per transcript and amortises I/O overhead.
 plfold_matrices <- vector("list", length(FA.all))
 names(plfold_matrices) <- names(FA.all)
-valid_for_plfold <- which(width(FA.all) >= 80)
+valid_for_plfold <- which(width(FA.all) >= 80 & width(FA.all) <= 10000)
 if (length(valid_for_plfold) > 0) {
   FA_batch <- FA.all[valid_for_plfold]
   orig_names_batch <- names(FA_batch)
@@ -706,7 +717,9 @@ if (length(valid_for_plfold) > 0) {
   on.exit(file.remove(batch_fa_file), add = TRUE)
   # --noPS is not supported by all RNAplfold versions; omit it and clean up
   # _dp.ps files manually inside the loop below.
-  cmd_batch <- paste0("cat ", batch_fa_file, " | ", RNAplfold, " -L 40 -W 80 -u 50")
+  # Only the 23-nt unpaired probability is consumed below.  -c 1 suppresses
+  # almost all dotplot serialization; it does not alter the _lunp values.
+  cmd_batch <- paste0("cat ", batch_fa_file, " | ", RNAplfold, " -L 40 -W 80 -u 23 -c 1")
   system(cmd_batch, intern = TRUE)
   for (j in seq_along(FA_batch)) {
     lunp_file <- paste0('./', RanStr_batch, '_', j, '_lunp')
@@ -872,7 +885,17 @@ Guide.df$transcript_id <- transcript_id
 # Seqs = DNAStringSet(Guide.df$GuideSeq)
 # names(Seqs) =  paste0(rownames(Guide.df),"_",as.character(round(Guide.df$standardizedGuideScores,4)),"_",as.character(Guide.df$Rank),"_Q",Guide.df$quartiles)
 # writeXStringSet(Seqs, filepath = paste0(name,"_","CasRxguides.fa"), append = F, format = "fasta")
-write.table(Guide.df, file = paste0(name,"_","CasRxguides.csv"), quote = F, sep=",", col.names = T, row.names = F)
+output_file <- if (!is.na(combined_output)) combined_output else paste0(name,"_","CasRxguides.csv")
+append_output <- file.exists(output_file)
+write.table(
+  Guide.df,
+  file = output_file,
+  quote = F,
+  sep = ",",
+  col.names = !append_output,
+  row.names = F,
+  append = append_output
+)
 
 cat( paste0( "done " , date() ,"\n"))
 
@@ -888,7 +911,5 @@ if (PLOT == TRUE){
 }
 
 }
-
-
 
 
