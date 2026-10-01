@@ -1,0 +1,146 @@
+################################################################################
+### README #####################################################################
+
+
+If you are using our software, please cite:
+Hans-Hermann Wessels, Alejandro Méndez-Mancilla, Xinyi Guo, Mateusz Legut, Zharko Daniloski, Neville E. Sanjana. 
+Massively parallel Cas13 screens reveal principles for guide RNA design. Nature Biotechnology (2020). doi:10.1038/s41587-020-0456-9
+https://www.nature.com/articles/s41587-020-0456-9
+
+
+
+
+
+This R-script software serves to predict guides for RfxCas13d Type-IV CRISPR proteins to maximize knock-down efficiencies.
+Guide efficacies are modeled after an on-target tilling screen against GFP, CD46, CD55, and CD71 mRNA.
+
+### Installation ###############################################################
+
+
+You have already unpacked Cas13design.tar.gz
+
+		tar -xzf Cas13design.tar.gz
+
+
+
+Unpacking Cas13design.tar.gz will create a Cas13design directory, as well as scripts and data sub-directories. 
+The main executable RfxCas13d_GuideScoring.R can be found within the scripts sub-directory.
+External RNAfold and RNAplfold binaries v2.4.10 are included. RNAhybrid may be installed and added to your $PATH (see below).
+All R packages needed will be automatically installed within the scripts folder upon the first execution.
+This may increase the runtime of the first run by several minutes. We recommend using R v3.6 or newer to execute RfxCas13d_GuideScoring.R.
+If older R versions are used, the Bioconductor package Biostrings may need to be installed manually via BiocLite.
+Model input data as well as an example input fasta file are included within the data sub-sirectory.
+
+
+
+
+Next, please install RNAhybrid.
+The source code can be downloaded here:
+		
+		wget https://bibiserv.cebitec.uni-bielefeld.de/applications/rnahybrid/resources/downloads/RNAhybrid-2.1.2.tar.gz
+
+
+copy RNAhybrid-2.1.2.tar.gz into ./Cas13design/scripts/ and unpack RNAhybrid
+ 
+		cp RNAhybrid-2.1.2.tar.gz ./Cas13design/scripts/
+		cd ./Cas13design/scripts/
+		tar -xzf RNAhybrid-2.1.2.tar.gz
+		cd RNAhybrid-2.1.2
+
+Follow the installation instructions for RNAhybrid in INSTALL:
+
+	If you install it on your local system and you have sudo rights, do:
+        ./configure
+        make
+        make install
+
+    If you install it e.g. on a cluster without sudo rights you can follow this:
+        ./configure --prefix=$HOME     #this will create a bin folder in your $HOME directory
+        make
+        make install
+        export PATH=$HOME/bin:$PATH		# You may want to add this to your ~/.bashrc or ~/.bash_profile
+
+
+Make sure RNAhybrid has been added to your PATH
+		which RNAhybrid   # should return  ~/bin/RNAhybrid 
+
+The Software will assume RNAhybrid is in ~/bin/ 
+
+
+
+
+All other dependencies are included in the Cas13design.tar.gz archive
+
+
+
+
+
+
+
+### Guide Prediction ###########################################################
+
+
+
+To predict guide RNA efficacies simply call RfxCas13d_GuideScoring.R with its three required input arguments in order. In its current implmentation, the script will run successfully only within its main directory Cas13design.
+
+
+	cd Cas13design 
+
+	Rscript <script.R> <input fasta> <model input> <plot logical>
+
+The input fasta file should contain a single entry. 
+Running multiple prediction is faster, if separate instances are coerced.
+The fasta header contains its name. Additional information is expected to be separated by "|". CDS coordinates, if present, should be provided in the following format within the fasta header (e.g. CDS:171-2453). These coordinates only become relevant, if you desire to plot guide predictions along cds-containing transcripts.
+
+Run the example data: 
+	Rscript ./scripts/RfxCas13d_GuideScoring.R  ./data/test.fa ./data/Cas13designGuidePredictorInput.csv true
+
+
+If you run the script the first time, R package installation may take several minutes. 
+Once Cas13design is fully installed, the run time scales with the fasta input length.
+The minimum length supplied must be at least 30 nucleotides. The total run time for the provided ~1000nt test.fa example is about 2 min and 10 sec.
+
+
+
+### Expected outputs ###########################################################
+
+
+
+The output may be 3-fold and named after the fasta header information:
+1) 	A fasta file with guide sequences (reverse complement to the target sequence). 
+	The header includes the following information separated by underscores "_"
+		the crRNA number (5' to 3') and match position (e.g. crRNA1156:1399-1425)
+		standardized guide score
+		rank
+		quartile according to input screens
+2) 	A csv file containing all predicted guides
+3)  if plot was set to TRUE, a pdf file is returned depicting the score destribution along the target transcripts
+
+Guide scores range between a 0 - 1 interval, with higher scores being indicative for higher predicted knock-down efficacy. 
+
+
+
+# Additional information
+
+For more information, please refer to our manuscript.
+
+################################################################# /README ######
+################################################################################
+
+
+
+################################################################################
+### COPYRIGHT ##################################################################
+
+# New York Genome Center
+
+# Copyright (c) 2019 Hans-Hermann Wessels and Neville Sanjana. 
+# Released under BSD 3. See LICENSE file for details.
+
+# If you're interested in getting access to this system under a different license, please contact us. 
+
+# Version: 0.2
+# Author: Hans-Hermann Wessels
+
+################################################################# /COPYRIGHT ###
+################################################################################

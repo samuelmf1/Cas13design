@@ -1,0 +1,21 @@
+# R packages auto-installed by RfxCas13d_GuideScoring.R on first run (see Install.txt)
+scripts/R/
+
+# RNAhybrid source tarball/build (user-installed per Install.txt)
+scripts/RNAhybrid-2.1.2/
+scripts/RNAhybrid-2.1.2.tar.gz
+/RNAhybrid-2.1.2.tar.gz
+
+# Locally-compiled binary (built from track-cas13's assets/rnahybrid_paired.c)
+scripts/rnahybrid_paired
+
+# Generated run output / local smoke-test artifacts, not part of the vendored tool
+v1/
+v2/
+TestSequence_CasRxguides.*
+*_hybMFE_*.txt
+data/*_CasRx_gRNA_predictions/
+
+# OS cruft
+._*
+.DS_Store
